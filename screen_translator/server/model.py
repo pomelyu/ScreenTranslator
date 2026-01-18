@@ -20,8 +20,9 @@ class Qwen3VLModel:
         """Load the vLLM model and processor"""
         print(f"Loading model: {self.config.MODEL_NAME}")
         
-        # Set environment variable for vLLM multiprocessing
+        # Set environment variables for vLLM
         os.environ['VLLM_WORKER_MULTIPROC_METHOD'] = 'spawn'
+        os.environ['VLLM_USE_V1'] = '0'  # Disable V1 engine for RTX 50 series compatibility
         
         # Determine tensor parallel size
         tensor_parallel_size = self.config.TENSOR_PARALLEL_SIZE
