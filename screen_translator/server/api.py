@@ -3,11 +3,13 @@ import base64
 import io
 import tempfile
 import os
-from typing import Optional
+import time
+from typing import Optional, Dict, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from PIL import Image
+import torch
 
 from .config import Config
 from .model import Qwen3VLModel
@@ -26,7 +28,9 @@ class TranslateResponse(BaseModel):
     """Translation response"""
     translated_text: str
     detected_lang: Optional[str] = None
+    processing_time: float  # Total API processing time (seconds)
     success: bool = True
+    metrics: Optional[Dict[str, Any]] = None  # vLLM internal metrics (e2e_time, time_to_first_token, etc.)
 
 
 class HealthResponse(BaseModel):
@@ -92,18 +96,24 @@ async def translate(request: TranslateRequest):
             tmp_path = tmp_file.name
         
         try:
-            # Perform translation
-            translated_text = model.translate(
+            # Perform translation and measure wall-clock time
+            start_time = time.perf_counter()
+            
+            translated_text, vllm_metrics = model.translate(
                 image_path=tmp_path,
                 source_lang=request.source_lang or config.DEFAULT_SOURCE_LANG,
                 target_lang=request.target_lang or config.DEFAULT_TARGET_LANG,
                 max_tokens=request.max_tokens
             )
             
+            processing_time = time.perf_counter() - start_time
+            
             return TranslateResponse(
                 translated_text=translated_text,
                 detected_lang=None,  # TODO: Add language detection
-                success=True
+                processing_time=processing_time,
+                success=True,
+                metrics=vllm_metrics
             )
         finally:
             # Clean up temp file

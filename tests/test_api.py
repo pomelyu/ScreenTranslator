@@ -18,7 +18,7 @@ def test_health():
     print(f"Response: {json.dumps(response.json(), indent=2)}")
     print()
 
-def test_translate(image_path: str, target_lang: str = "Traditional Chinese"):
+def test_translate(image_path: str, target_lang: str = "en"):
     """Test translate endpoint"""
     print("=" * 60)
     print(f"TEST: Translate {Path(image_path).name}")
@@ -58,6 +58,21 @@ def test_translate(image_path: str, target_lang: str = "Traditional Chinese"):
         print(f"\n✓ Translation successful!")
         print(f"Translated text: {result['translated_text']}")
         print(f"Detected language: {result.get('detected_lang', 'N/A')}")
+        print(f"Server processing time: {result.get('processing_time', 0):.3f}s")
+        
+        # Display vLLM metrics if available
+        if result.get('metrics'):
+            print(f"\nvLLM Metrics:")
+            metrics = result['metrics']
+            if metrics.get('e2e_time'):
+                print(f"  - E2E time: {metrics['e2e_time']:.3f}s")
+            if metrics.get('time_to_first_token'):
+                print(f"  - Time to first token: {metrics['time_to_first_token']:.3f}s")
+            if metrics.get('time_per_output_token'):
+                print(f"  - Time per output token: {metrics['time_per_output_token']:.4f}s")
+            if metrics.get('time_in_queue'):
+                print(f"  - Time in queue: {metrics['time_in_queue']:.3f}s")
+        print(f"Server processing time: {result.get('processing_time', 'N/A'):.2f} seconds")
     else:
         print(f"\n✗ Translation failed!")
         print(f"Error: {response.text}")

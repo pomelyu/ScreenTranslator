@@ -81,7 +81,7 @@ class Qwen3VLModel:
         source_lang: str = "auto",
         target_lang: str = "en",
         max_tokens: Optional[int] = None
-    ) -> str:
+    ) -> tuple[str, Dict[str, Any]]:
         """
         Translate text in image to target language
         
@@ -92,7 +92,7 @@ class Qwen3VLModel:
             max_tokens: Maximum tokens to generate
             
         Returns:
-            Translated text
+            Tuple of (translated_text, metrics_dict)
         """
         if self.model is None:
             raise RuntimeError("Model not loaded. Call load() first.")
@@ -126,8 +126,23 @@ class Qwen3VLModel:
         # Generate with vLLM
         outputs = self.model.generate(inputs, sampling_params=sampling_params)
         
-        # Extract generated text
-        if outputs and len(outputs) > 0 and len(outputs[0].outputs) > 0:
-            return outputs[0].outputs[0].text.strip()
+        # Extract generated text and metrics
+        metrics = {}
+        text = ""
         
-        return ""
+        if outputs and len(outputs) > 0:
+            output = outputs[0]
+            if len(output.outputs) > 0:
+                text = output.outputs[0].text.strip()
+            
+            # Extract timing metrics from vLLM output
+            if hasattr(output, 'metrics'):
+                m = output.metrics
+                metrics = {
+                    'time_in_queue': getattr(m, 'time_in_queue', None),
+                    'time_to_first_token': getattr(m, 'time_to_first_token_s', None),
+                    'time_per_output_token': getattr(m, 'time_per_output_token_s', None),
+                    'e2e_time': getattr(m, 'time_e2e_s', None)
+                }
+        
+        return text, metrics
