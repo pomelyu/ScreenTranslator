@@ -1,0 +1,1 @@
+"""Screen Translator Desktop Client"""
