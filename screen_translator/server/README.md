@@ -97,9 +97,9 @@ PORT="8000"
 Create a `config.yaml` file in the project root:
 
 ```bash
-cp config.example.yaml config.yaml
+cp server_config.example.yaml server_config.yaml
 # Edit config.yaml with your settings
-python run_server.py
+python run_server.py -c server_config.yaml
 ```
 
 The YAML configuration will automatically be loaded if the file exists. YAML settings override environment variables.
