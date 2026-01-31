@@ -45,6 +45,19 @@ app = FastAPI(title="Screen Translator API", version="1.0.0")
 
 # Global model instance
 config = Config()
+
+# Try to load config from yaml file if it exists
+import os.path
+config_yaml_path = os.path.join(os.path.dirname(__file__), '..', '..', 'config.yaml')
+if os.path.exists(config_yaml_path):
+    try:
+        print(f"Loading configuration from {config_yaml_path}")
+        config.load_yaml(config_yaml_path)
+        print("Configuration loaded successfully")
+    except Exception as e:
+        print(f"Warning: Failed to load config.yaml: {e}")
+        print("Using default configuration")
+
 model = Qwen3VLModel(config)
 
 

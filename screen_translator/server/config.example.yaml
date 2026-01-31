@@ -1,0 +1,20 @@
+# Screen Translator Server Configuration Example
+# Copy this file to config.yaml and modify as needed
+
+# Model settings
+MODEL_NAME: "Qwen/Qwen2-VL-2B-Instruct"
+GPU_MEMORY_UTILIZATION: 0.70
+MAX_MODEL_LEN: 8196
+# TENSOR_PARALLEL_SIZE: 1  # Uncomment to set manually, otherwise auto-detects GPU count
+
+# Server settings
+HOST: "127.0.0.1"
+PORT: 8000
+
+# vLLM settings
+MAX_TOKENS: 1024
+TEMPERATURE: 0.7
+
+# Translation settings
+DEFAULT_SOURCE_LANG: "auto"
+DEFAULT_TARGET_LANG: "Traditional Chinese"

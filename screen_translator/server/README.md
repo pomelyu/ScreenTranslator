@@ -83,7 +83,7 @@ Response:
 
 ## Configuration
 
-Environment variables (optional):
+### 1. Environment Variables
 
 ```bash
 MODEL_NAME="Qwen/Qwen2-VL-2B-Instruct"  # or Qwen2-VL-4B
@@ -91,6 +91,33 @@ GPU_MEMORY_UTILIZATION="0.70"
 HOST="127.0.0.1"
 PORT="8000"
 ```
+
+### 2. YAML Configuration File (Recommended)
+
+Create a `config.yaml` file in the project root:
+
+```bash
+cp config.example.yaml config.yaml
+# Edit config.yaml with your settings
+python run_server.py
+```
+
+The YAML configuration will automatically be loaded if the file exists. YAML settings override environment variables.
+
+## Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `MODEL_NAME` | string | `Qwen/Qwen2-VL-2B-Instruct` | HuggingFace model identifier |
+| `GPU_MEMORY_UTILIZATION` | float | `0.70` | GPU memory utilization (0.0-1.0) |
+| `MAX_MODEL_LEN` | int | `8196` | Maximum model context length |
+| `TENSOR_PARALLEL_SIZE` | int | auto-detect | Number of GPUs for tensor parallelism |
+| `HOST` | string | `127.0.0.1` | Server host address |
+| `PORT` | int | `8000` | Server port |
+| `MAX_TOKENS` | int | `1024` | Maximum tokens to generate |
+| `TEMPERATURE` | float | `0.7` | Sampling temperature |
+| `DEFAULT_SOURCE_LANG` | string | `auto` | Default source language |
+| `DEFAULT_TARGET_LANG` | string | `Traditional Chinese` | Default target language |
 
 ## Testing with curl
 
