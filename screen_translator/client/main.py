@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox
 import threading
 from PIL import ImageTk
+import traceback
 from .capture import ScreenCapture
 from .api_client import TranslatorAPIClient
 
@@ -20,6 +21,8 @@ class ScreenTranslatorApp:
         self.capture = ScreenCapture()
         self.api_client = TranslatorAPIClient()
         self.current_image = None
+        self.windows_list = []
+        self.capture_mode = "fullscreen"  # or "window"
         
         # Create UI
         self._create_ui()
@@ -48,6 +51,53 @@ class ScreenTranslatorApp:
             fg="gray"
         )
         self.status_label.pack(side=tk.LEFT, padx=5)
+        
+        # Capture mode frame
+        mode_frame = tk.LabelFrame(self.root, text="Capture Mode", padx=10, pady=10)
+        mode_frame.pack(fill=tk.X, padx=20, pady=10)
+        
+        # Capture mode selection
+        mode_select_frame = tk.Frame(mode_frame)
+        mode_select_frame.pack(fill=tk.X)
+        
+        tk.Label(mode_select_frame, text="Mode:").pack(side=tk.LEFT)
+        self.mode_var = tk.StringVar(value="fullscreen")
+        
+        tk.Radiobutton(
+            mode_select_frame,
+            text="Full Screen",
+            variable=self.mode_var,
+            value="fullscreen",
+            command=self._on_mode_change
+        ).pack(side=tk.LEFT, padx=5)
+        
+        tk.Radiobutton(
+            mode_select_frame,
+            text="Select Window",
+            variable=self.mode_var,
+            value="window",
+            command=self._on_mode_change
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # Window selection frame (initially hidden)
+        self.window_frame = tk.Frame(mode_frame)
+        
+        tk.Label(self.window_frame, text="Window:").pack(side=tk.LEFT)
+        self.window_var = tk.StringVar()
+        self.window_combo = ttk.Combobox(
+            self.window_frame,
+            textvariable=self.window_var,
+            state="readonly",
+            width=30
+        )
+        self.window_combo.pack(side=tk.LEFT, padx=5)
+        
+        self.refresh_btn = tk.Button(
+            self.window_frame,
+            text="🔄 Refresh",
+            command=self._refresh_windows
+        )
+        self.refresh_btn.pack(side=tk.LEFT, padx=5)
         
         # Capture button
         capture_frame = tk.Frame(self.root)
@@ -115,6 +165,31 @@ class ScreenTranslatorApp:
         )
         copy_btn.pack(pady=5)
         
+    def _on_mode_change(self):
+        """Handle capture mode change"""
+        mode = self.mode_var.get()
+        if mode == "window":
+            self.window_frame.pack(fill=tk.X, pady=(10, 0))
+            self._refresh_windows()
+        else:
+            self.window_frame.pack_forget()
+    
+    def _refresh_windows(self):
+        """Refresh the list of available windows"""
+        self.windows_list = self.capture.get_windows()
+        
+        if self.windows_list:
+            window_titles = [f"{w['title']}" for w in self.windows_list]
+            self.window_combo['values'] = window_titles
+            if window_titles:
+                self.window_combo.current(0)
+        else:
+            self.window_combo['values'] = ["No windows found"]
+            messagebox.showwarning(
+                "No Windows",
+                "No windows found. Make sure wmctrl is installed:\nsudo apt-get install wmctrl"
+            )
+        
     def _check_server(self):
         """Check if backend server is running"""
         if self.api_client.check_health():
@@ -143,19 +218,43 @@ class ScreenTranslatorApp:
     def _capture_and_translate(self):
         """Capture screenshot and send to server"""
         try:
-            # Minimize window briefly to capture clean screenshot
-            self.root.withdraw()
-            self.root.after(300, lambda: None)  # Small delay
-            self.root.update()
+            mode = self.mode_var.get()
             
-            import time
-            time.sleep(0.3)  # Wait for window to minimize
-            
-            # Capture screenshot
-            self.current_image = self.capture.capture_fullscreen()
-            
-            # Restore window
-            self.root.deiconify()
+            if mode == "window":
+                # Capture selected window
+                if not self.windows_list:
+                    raise Exception("No windows available. Please refresh the window list.")
+                
+                selected_index = self.window_combo.current()
+                if selected_index < 0 or selected_index >= len(self.windows_list):
+                    raise Exception("Please select a window to capture.")
+                
+                selected_window = self.windows_list[selected_index]
+                window_id = selected_window['id']
+                
+                # Update UI
+                self.root.after(0, lambda: self.result_text.insert(tk.END, f"Capturing window: {selected_window['title']}...\n"))
+                
+                # Capture window
+                self.current_image = self.capture.capture_window(window_id)
+                
+                if self.current_image is None:
+                    raise Exception("Failed to capture window. Make sure wmctrl is installed.")
+            else:
+                # Capture full screen
+                # Minimize window briefly to capture clean screenshot
+                self.root.withdraw()
+                self.root.after(300, lambda: None)  # Small delay
+                self.root.update()
+                
+                import time
+                time.sleep(0.3)  # Wait for window to minimize
+                
+                # Capture screenshot
+                self.current_image = self.capture.capture_fullscreen()
+                
+                # Restore window
+                self.root.deiconify()
             
             # Update UI
             self.root.after(0, lambda: self.result_text.insert(tk.END, "Screenshot captured!\nTranslating...\n"))
@@ -171,9 +270,9 @@ class ScreenTranslatorApp:
             self.root.after(0, lambda: self._display_result(result))
             
         except Exception as e:
-            import traceback
             traceback.print_exc()
-            self.root.after(0, lambda: self._display_error(str(e)))
+            error_msg = str(e)  # Capture error message before lambda
+            self.root.after(0, lambda msg=error_msg: self._display_error(msg))
         finally:
             self.root.after(0, lambda: self.capture_btn.config(
                 state=tk.NORMAL,
