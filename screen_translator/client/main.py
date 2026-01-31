@@ -23,6 +23,7 @@ class ScreenTranslatorApp:
         self.current_image = None
         self.windows_list = []
         self.capture_mode = "fullscreen"  # or "window"
+        self.backend = "vllm"  # or "gemini"
         
         # Create UI
         self._create_ui()
@@ -119,6 +120,62 @@ class ScreenTranslatorApp:
         settings_frame = tk.LabelFrame(self.root, text="Settings", padx=10, pady=10)
         settings_frame.pack(fill=tk.X, padx=20, pady=10)
         
+        # Backend selection
+        backend_frame = tk.Frame(settings_frame)
+        backend_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        tk.Label(backend_frame, text="Backend:").pack(side=tk.LEFT)
+        self.backend_var = tk.StringVar(value="vllm")
+        
+        tk.Radiobutton(
+            backend_frame,
+            text="vLLM Server",
+            variable=self.backend_var,
+            value="vllm",
+            command=self._on_backend_change
+        ).pack(side=tk.LEFT, padx=5)
+        
+        tk.Radiobutton(
+            backend_frame,
+            text="Gemini API",
+            variable=self.backend_var,
+            value="gemini",
+            command=self._on_backend_change
+        ).pack(side=tk.LEFT, padx=5)
+        
+        # Gemini API Key frame (initially hidden)
+        self.gemini_key_frame = tk.Frame(settings_frame)
+        tk.Label(self.gemini_key_frame, text="Gemini API Key:").pack(side=tk.LEFT)
+        self.gemini_api_key_var = tk.StringVar()
+        self.gemini_api_key_entry = tk.Entry(
+            self.gemini_key_frame,
+            textvariable=self.gemini_api_key_var,
+            show="*",
+            width=40
+        )
+        self.gemini_api_key_entry.pack(side=tk.LEFT, padx=5)
+        
+        # Gemini model selection frame (initially hidden)
+        self.gemini_model_frame = tk.Frame(settings_frame)
+        tk.Label(self.gemini_model_frame, text="Gemini Model:").pack(side=tk.LEFT)
+        self.gemini_model_var = tk.StringVar(value="gemini-2.5-flash-image")
+        self.gemini_model_combo = ttk.Combobox(
+            self.gemini_model_frame,
+            textvariable=self.gemini_model_var,
+            state="readonly",
+            width=35,
+            values=["gemini-2.5-flash-image"]  # Default, will be updated
+        )
+        self.gemini_model_combo.pack(side=tk.LEFT, padx=5)
+        
+        self.refresh_models_btn = tk.Button(
+            self.gemini_model_frame,
+            text="🔄",
+            command=self._refresh_gemini_models,
+            width=3
+        )
+        self.refresh_models_btn.pack(side=tk.LEFT, padx=2)
+        
         # Target language
         lang_frame = tk.Frame(settings_frame)
         lang_frame.pack(fill=tk.X)
@@ -189,6 +246,47 @@ class ScreenTranslatorApp:
             self._refresh_windows()
         else:
             self.window_frame.pack_forget()
+    
+    def _on_backend_change(self):
+        """Handle backend change"""
+        backend = self.backend_var.get()
+        
+        if backend == "gemini":
+            self.gemini_key_frame.pack(fill=tk.X, pady=(5, 0))
+            self.gemini_model_frame.pack(fill=tk.X, pady=(5, 0))
+            self.status_label.config(text="Gemini API", fg="blue")
+            self.capture_btn.config(state=tk.NORMAL)
+            # Try to fetch models if API key is present
+            if self.gemini_api_key_var.get():
+                self._refresh_gemini_models()
+        else:
+            self.gemini_key_frame.pack_forget()
+            self.gemini_model_frame.pack_forget()
+            self._check_server()
+    
+    def _refresh_gemini_models(self):
+        """Refresh the list of available Gemini models"""
+        api_key = self.gemini_api_key_var.get()
+        if not api_key:
+            messagebox.showwarning("API Key Required", "Please enter your Gemini API key first.")
+            return
+        
+        try:
+            self.refresh_models_btn.config(state=tk.DISABLED, text="...")
+            models = self.api_client.get_gemini_models(api_key)
+            
+            if models:
+                self.gemini_model_combo['values'] = models
+                # Set to first model if current selection not in list
+                if self.gemini_model_var.get() not in models:
+                    self.gemini_model_var.set(models[0])
+                messagebox.showinfo("Success", f"Found {len(models)} Gemini models")
+            else:
+                messagebox.showwarning("No Models", "No Gemini models found")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to fetch Gemini models: {str(e)}")
+        finally:
+            self.refresh_models_btn.config(state=tk.NORMAL, text="🔄")
     
     def _refresh_windows(self):
         """Refresh the list of available windows"""
@@ -278,13 +376,21 @@ class ScreenTranslatorApp:
             # Get custom prompt
             custom_prompt = self.prompt_text.get("1.0", tk.END).strip()
             
-            # Send to server
+            # Get backend and API key
+            backend = self.backend_var.get()
+            gemini_api_key = self.gemini_api_key_var.get() if backend == "gemini" else None
+            gemini_model = self.gemini_model_var.get() if backend == "gemini" else None
+            
+            # Send to backend
             target_lang = self.target_lang_var.get()
             result = self.api_client.translate_image(
                 self.current_image,
                 source_lang="auto",
                 target_lang=target_lang,
-                custom_prompt=custom_prompt if custom_prompt else None
+                custom_prompt=custom_prompt if custom_prompt else None,
+                backend=backend,
+                gemini_api_key=gemini_api_key,
+                gemini_model=gemini_model
             )
             
             # Update UI with result
