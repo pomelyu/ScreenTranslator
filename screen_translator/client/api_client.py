@@ -37,7 +37,8 @@ class TranslatorAPIClient:
         image: Image.Image,
         source_lang: str = "auto",
         target_lang: str = "Traditional Chinese",
-        max_tokens: Optional[int] = None
+        max_tokens: Optional[int] = None,
+        custom_prompt: Optional[str] = None
     ) -> Dict[str, Any]:
         """
         Translate text in image
@@ -47,6 +48,7 @@ class TranslatorAPIClient:
             source_lang: Source language (default: auto-detect)
             target_lang: Target language
             max_tokens: Maximum tokens to generate
+            custom_prompt: Custom prompt template (use ${TARGET_LANG} as placeholder)
             
         Returns:
             Dictionary containing translation result and metrics
@@ -68,6 +70,9 @@ class TranslatorAPIClient:
         
         if max_tokens:
             payload["max_tokens"] = max_tokens
+        
+        if custom_prompt:
+            payload["custom_prompt"] = custom_prompt
         
         # Send request
         response = self.session.post(

@@ -134,6 +134,22 @@ class ScreenTranslatorApp:
         )
         self.target_lang_combo.pack(side=tk.LEFT, padx=10)
         
+        # Custom prompt
+        prompt_frame = tk.Frame(settings_frame)
+        prompt_frame.pack(fill=tk.X, pady=(10, 0))
+        
+        tk.Label(prompt_frame, text="Custom Prompt:").pack(anchor=tk.W)
+        tk.Label(prompt_frame, text="(Use ${TARGET_LANG} as placeholder)", font=("Arial", 8), fg="gray").pack(anchor=tk.W)
+        
+        self.prompt_text = scrolledtext.ScrolledText(
+            prompt_frame,
+            wrap=tk.WORD,
+            font=("Arial", 9),
+            height=3
+        )
+        self.prompt_text.pack(fill=tk.X)
+        self.prompt_text.insert("1.0", "Please detect the language in this image and translate all text to ${TARGET_LANG}. Only provide the translated text, nothing else.")
+        
         # Result frame
         result_frame = tk.LabelFrame(self.root, text="Translation Result", padx=10, pady=10)
         result_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=10)
@@ -259,11 +275,16 @@ class ScreenTranslatorApp:
             # Update UI
             self.root.after(0, lambda: self.result_text.insert(tk.END, "Screenshot captured!\nTranslating...\n"))
             
+            # Get custom prompt
+            custom_prompt = self.prompt_text.get("1.0", tk.END).strip()
+            
             # Send to server
             target_lang = self.target_lang_var.get()
             result = self.api_client.translate_image(
                 self.current_image,
-                target_lang=target_lang
+                source_lang="auto",
+                target_lang=target_lang,
+                custom_prompt=custom_prompt if custom_prompt else None
             )
             
             # Update UI with result

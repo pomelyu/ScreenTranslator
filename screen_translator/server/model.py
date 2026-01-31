@@ -80,7 +80,8 @@ class Qwen3VLModel:
         image_path: str,
         source_lang: str = "auto",
         target_lang: str = "en",
-        max_tokens: Optional[int] = None
+        max_tokens: Optional[int] = None,
+        custom_prompt: Optional[str] = None
     ) -> tuple[str, Dict[str, Any]]:
         """
         Translate text in image to target language
@@ -90,6 +91,7 @@ class Qwen3VLModel:
             source_lang: Source language (auto-detect if "auto")
             target_lang: Target language code
             max_tokens: Maximum tokens to generate
+            custom_prompt: Custom prompt template with ${TARGET_LANG} placeholder
             
         Returns:
             Tuple of (translated_text, metrics_dict)
@@ -98,7 +100,10 @@ class Qwen3VLModel:
             raise RuntimeError("Model not loaded. Call load() first.")
         
         # Create translation prompt
-        if source_lang == "auto":
+        if custom_prompt:
+            # Use custom prompt and replace ${TARGET_LANG} placeholder
+            prompt = custom_prompt.replace("${TARGET_LANG}", target_lang)
+        elif source_lang == "auto":
             prompt = f"Please detect the language in this image and translate all text to {target_lang}. Only provide the translated text, nothing else."
         else:
             prompt = f"Please translate all text in this image from {source_lang} to {target_lang}. Only provide the translated text, nothing else."

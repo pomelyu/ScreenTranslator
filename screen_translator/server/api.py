@@ -22,6 +22,7 @@ class TranslateRequest(BaseModel):
     source_lang: Optional[str] = "auto"
     target_lang: Optional[str] = "en"
     max_tokens: Optional[int] = None
+    custom_prompt: Optional[str] = None  # Custom prompt with ${TARGET_LANG} placeholder
 
 
 class TranslateResponse(BaseModel):
