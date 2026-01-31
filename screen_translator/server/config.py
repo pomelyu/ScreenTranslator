@@ -9,6 +9,7 @@ class Config:
     # Model settings
     MODEL_NAME: str = os.getenv("MODEL_NAME", "Qwen/Qwen2-VL-2B-Instruct")
     GPU_MEMORY_UTILIZATION: float = float(os.getenv("GPU_MEMORY_UTILIZATION", "0.70"))
+    MAX_MODEL_LEN: int = int(os.getenv("MAX_MODEL_LEN", "8196"))
     TENSOR_PARALLEL_SIZE: Optional[int] = None  # Auto-detect GPU count
     
     # Server settings

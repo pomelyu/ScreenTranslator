@@ -35,6 +35,7 @@ class Qwen3VLModel:
             model=self.config.MODEL_NAME,
             trust_remote_code=True,
             gpu_memory_utilization=self.config.GPU_MEMORY_UTILIZATION,
+            max_model_len=self.config.MAX_MODEL_LEN,
             enforce_eager=False,
             tensor_parallel_size=tensor_parallel_size,
             seed=0
