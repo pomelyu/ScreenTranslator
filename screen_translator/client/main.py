@@ -2,34 +2,44 @@
 import tkinter as tk
 from tkinter import ttk, scrolledtext, messagebox
 import threading
-from PIL import ImageTk
 import traceback
+import argparse
+from pathlib import Path
 from .capture import ScreenCapture
 from .api_client import TranslatorAPIClient
+from .config import ScreenTranslatorConfig
 
 
 class ScreenTranslatorApp:
     """Main GUI application"""
     
-    def __init__(self, root):
+    def __init__(self, root, config_path: str):
         """Initialize the application"""
         self.root = root
         self.root.title("Screen Translator")
         self.root.geometry("600x500")
+        
+        # Load configuration
+        self.config = ScreenTranslatorConfig()
+        self.config_path = Path(config_path)
+        self._load_config()
         
         # Initialize components
         self.capture = ScreenCapture()
         self.api_client = TranslatorAPIClient()
         self.current_image = None
         self.windows_list = []
-        self.capture_mode = "fullscreen"  # or "window"
-        self.backend = "vllm"  # or "gemini"
+        self.capture_mode = self.config.capture_mode
+        self.backend = self.config.backend
         
         # Create UI
         self._create_ui()
         
+        # Apply config values to UI
+        self._apply_config_to_ui()
+        
         # Check server health on startup
-        self.root.after(100, self._check_server)
+        # self.root.after(100, self._check_server)
         
     def _create_ui(self):
         """Create the user interface"""
@@ -146,11 +156,11 @@ class ScreenTranslatorApp:
         # Gemini API Key frame (initially hidden)
         self.gemini_key_frame = tk.Frame(settings_frame)
         tk.Label(self.gemini_key_frame, text="Gemini API Key:").pack(side=tk.LEFT)
-        self.gemini_api_key_var = tk.StringVar()
+        self.gemini_api_key_var = tk.StringVar(value=self.config.gemini_key)
         self.gemini_api_key_entry = tk.Entry(
             self.gemini_key_frame,
             textvariable=self.gemini_api_key_var,
-            show="*",
+            show="*",  # Hide the API key text
             width=40
         )
         self.gemini_api_key_entry.pack(side=tk.LEFT, padx=5)
@@ -237,6 +247,55 @@ class ScreenTranslatorApp:
             command=self._copy_to_clipboard
         )
         copy_btn.pack(pady=5)
+    
+    def _load_config(self):
+        """Load configuration from YAML file"""
+        if self.config_path.exists():
+            try:
+                self.config.load_yaml(str(self.config_path))
+                print(f"Configuration loaded from {self.config_path}")
+            except Exception as e:
+                print(f"Warning: Failed to load config: {e}")
+                print("Using default configuration")
+        else:
+            print(f"No config file found at {self.config_path}, using defaults")
+    
+    def _apply_config_to_ui(self):
+        """Apply configuration values to UI elements"""
+        # Set capture mode
+        self.mode_var.set(self.config.capture_mode)
+        self._on_mode_change()
+        
+        # Set backend
+        self.backend_var.set(self.config.backend)
+        self._on_backend_change()
+        
+        # Set Gemini model (API key already set in StringVar initialization)
+        if self.config.gemini_model:
+            self.gemini_model_var.set(self.config.gemini_model)
+        
+        # Set custom prompt
+        if self.config.prompt:
+            self.prompt_text.delete("1.0", tk.END)
+            self.prompt_text.insert("1.0", self.config.prompt)
+    
+    def _save_config(self):
+        """Save current UI values to configuration file"""
+        try:
+            # Update config from UI
+            self.config.capture_mode = self.mode_var.get()
+            self.config.backend = self.backend_var.get()
+            self.config.prompt = self.prompt_text.get("1.0", tk.END).strip()
+            self.config.gemini_key = self.gemini_api_key_var.get()
+            self.config.gemini_model = self.gemini_model_var.get()
+            
+            # Save to file
+            self.config.save_yaml(str(self.config_path))
+            print(f"Configuration saved to {self.config_path}")
+            return True
+        except Exception as e:
+            print(f"Failed to save config: {e}")
+            return False
         
     def _on_mode_change(self):
         """Handle capture mode change"""
@@ -448,13 +507,18 @@ class ScreenTranslatorApp:
         
     def cleanup(self):
         """Cleanup resources"""
+        # Save configuration before closing
+        self._save_config()
         self.api_client.close()
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--config", "-c", type=str, help="path to config file", default="")
+    args = parser.parse_args()
     """Entry point for the desktop application"""
     root = tk.Tk()
-    app = ScreenTranslatorApp(root)
+    app = ScreenTranslatorApp(root, args.config)
     
     try:
         app.run()

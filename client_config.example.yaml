@@ -1,0 +1,16 @@
+# Screen Translator Client Configuration
+# This file is automatically created when you close the app
+# You can also manually edit it to set your preferences
+
+# Capture mode: "window" or "fullscreen"
+capture_mode: window
+
+# Backend: "gemini" or "vllm"
+backend: gemini
+
+# Custom prompt (use ${TARGET_LANG} as placeholder)
+prompt: "Translate dialog text in this image to ${TARGET_LANG}. Output the result in the format: translated text(original text). For example: 當然，未來也是(もちろん、将来も…). Only output the dialog and translated results.""
+
+# Gemini API settings
+gemini_model: gemini-2.5-flash-image
+gemini_key: ''  # Your Gemini API key (leave empty to enter in UI)

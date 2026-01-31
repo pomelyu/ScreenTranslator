@@ -1,10 +1,18 @@
 # Screen Translator Desktop Client
 
-Desktop application for capturing screenshots and translating on-screen text.
+Desktop application for capturing screenshots and translating text using either vLLM backend or Gemini API.
+
+## Features
+
+- **Full screen or window capture**
+- **Multiple backends**: Choose between local vLLM server or Google Gemini API
+- **Customizable prompts** with language placeholder
+- **Dynamic model selection** for Gemini
+- **YAML configuration** for persistent settings
 
 ## Setup
 
-### Install Dependencies
+### 1. Install Dependencies
 
 ```bash
 cd screen_translator/client
@@ -13,8 +21,36 @@ pip install -r requirements.txt
 
 Or install individually:
 ```bash
-pip install pyautogui pillow requests
+pip install pyautogui pillow requests mss google-generativeai PyYAML
 ```
+
+### 2. Configuration
+
+The client automatically loads and saves configuration from `client_config.yaml` in the project root.
+
+**Create your config** (optional):
+```bash
+cp client_config.example.yaml client_config.yaml
+# Edit client_config.yaml with your preferences
+```
+
+**Configuration options**:
+- `capture_mode`: "window" or "fullscreen"
+- `backend`: "gemini" or "vllm"
+- `prompt`: Custom prompt template (use ${TARGET_LANG} placeholder)
+- `gemini_model`: Preferred Gemini model (e.g., "gemini-2.0-flash-exp")
+- `gemini_key`: Your Gemini API key (optional, can enter in UI)
+
+**Example config**:
+```yaml
+capture_mode: window
+backend: gemini
+prompt: Please detect the language in this image and translate all text to ${TARGET_LANG}. Only provide the translated text, nothing else.
+gemini_model: gemini-2.0-flash-exp
+gemini_key: ''  # Leave empty to enter in UI
+```
+
+The app automatically saves your settings when you close it.
 
 ## Usage
 
